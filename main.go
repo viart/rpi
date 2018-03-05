@@ -7,19 +7,20 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/go-ble/ble"
 	"github.com/go-ble/ble/linux"
 	"github.com/spf13/viper"
 	"gobot.io/x/gobot"
 	"gobot.io/x/gobot/drivers/gpio"
 	"gobot.io/x/gobot/drivers/i2c"
-	"gobot.io/x/gobot/platforms/mqtt"
 	"gobot.io/x/gobot/platforms/raspi"
 )
 
 type config struct {
 	Mqtt struct {
-		Host    string
+		Broker  string
+		LWT     string
 		Preffix string
 	}
 	Bme280 struct {
@@ -40,6 +41,7 @@ type config struct {
 
 var (
 	cfg        config
+	mqttClient mqtt.Client
 	configFile = flag.String("config", "config", "Config file")
 )
 
@@ -59,6 +61,26 @@ func init() {
 	if err != nil {
 		log.Fatalf("Error decoding into a config struct, %v", err)
 	}
+	mqttClient = initMqtt()
+}
+
+//TODO: proper shutdown
+func initMqtt() mqtt.Client {
+	opts := mqtt.NewClientOptions().AddBroker(cfg.Mqtt.Broker).SetClientID("rpi").SetAutoReconnect(true)
+	if cfg.Mqtt.LWT != "" {
+		opts.SetBinaryWill(cfg.Mqtt.LWT, []byte("0"), 1, true)
+		// inspired by https://www.hivemq.com/blog/mqtt-essentials-part-9-last-will-and-testament
+		opts.SetOnConnectHandler(func(c mqtt.Client) {
+			c.Publish(cfg.Mqtt.LWT, 1, true, []byte("1"))
+		})
+	}
+
+	c := mqtt.NewClient(opts)
+	if token := c.Connect(); token.Wait() && token.Error() != nil {
+		panic(token.Error())
+	}
+
+	return c
 }
 
 func x(suffix string) string {
@@ -68,15 +90,12 @@ func x(suffix string) string {
 func main() {
 	flag.Parse()
 
-	d, err := linux.NewDevice()
+	bleDevice, err := linux.NewDevice()
 	if err != nil {
 		log.Fatalf("Error initializing of a ble device : %s", err)
 	}
 
 	rpiAdaptor := raspi.NewAdaptor()
-	mqttAdaptor := mqtt.NewAdaptor(cfg.Mqtt.Host, "rpi")
-	mqttAdaptor.SetAutoReconnect(true)
-
 	bme280 := i2c.NewBME280Driver(rpiAdaptor, i2c.WithAddress(cfg.Bme280.Address)) // 0x76
 	pir := gpio.NewPIRMotionDriver(rpiAdaptor, cfg.Pir.Pin)
 
@@ -84,22 +103,17 @@ func main() {
 	defer cancel()
 
 	onMotionHandler := func(data interface{}) {
-		mqttAdaptor.Publish(x(cfg.Pir.MqttSuffix), data.([]byte))
+		mqttClient.Publish(x(cfg.Pir.MqttSuffix), 1, false, data.([]byte))
 	}
 
 	work := func() {
-		//TODO: paho + LWT setWill + onConnect
-		gobot.Every(1*time.Minute, func() {
-			mqttAdaptor.Publish(cfg.Mqtt.Preffix+"heartbeat", []byte{})
-		})
-
 		gobot.Every(cfg.Ble.Interval, func() {
 			ctx, cancel := context.WithTimeout(ctx, cfg.Ble.Duration)
 			defer cancel()
-			d.Scan(ctx, false, func(a ble.Advertisement) {
+			bleDevice.Scan(ctx, false, func(a ble.Advertisement) {
 				for _, item := range cfg.Ble.KnownDevices {
 					if item == a.Addr().String() {
-						mqttAdaptor.Publish(cfg.Ble.MqttPreffix+item, []byte("home"))
+						mqttClient.Publish(cfg.Ble.MqttPreffix+item, 1, false, []byte("home"))
 					}
 				}
 			})
@@ -110,15 +124,15 @@ func main() {
 
 		gobot.Every(cfg.Bme280.Interval, func() {
 			if t, err := bme280.Temperature(); err == nil {
-				mqttAdaptor.Publish(x("temperature"), float32bytes(t))
+				mqttClient.Publish(x("temperature"), 1, false, float32bytes(t))
 			}
 
 			if p, err := bme280.Pressure(); err == nil {
-				mqttAdaptor.Publish(x("pressure"), float32bytes(p/100))
+				mqttClient.Publish(x("pressure"), 1, false, float32bytes(p/100))
 			}
 
 			if h, err := bme280.Humidity(); err == nil {
-				mqttAdaptor.Publish(x("humidity"), float32bytes(h))
+				mqttClient.Publish(x("humidity"), 1, false, float32bytes(h))
 			}
 		})
 
@@ -126,7 +140,7 @@ func main() {
 	}
 
 	robot := gobot.NewRobot("bot",
-		[]gobot.Connection{rpiAdaptor, mqttAdaptor},
+		[]gobot.Connection{rpiAdaptor},
 		[]gobot.Device{bme280, pir},
 		work,
 	)

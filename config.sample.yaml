@@ -1,5 +1,5 @@
 mqtt:
-  host: tcp://server:1883
+  broker: tcp://server:1883
   preffix: rpi/
 pir:
   pin: 35

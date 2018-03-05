@@ -160,7 +160,6 @@
     "drivers/gpio",
     "drivers/i2c",
     "drivers/spi",
-    "platforms/mqtt",
     "platforms/raspi",
     "sysfs"
   ]
@@ -213,6 +212,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "50fa8e1e13505a19edb8f64ae47c566491bb8b9c5b59a52572e8013b5418a96c"
+  inputs-digest = "095980d6c84b33f938d99b0d15460ae3d12bdb3b1f9acdca128f4321598ee71f"
   solver-name = "gps-cdcl"
   solver-version = 1
