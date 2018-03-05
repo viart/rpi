@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -78,11 +77,15 @@ func main() {
 	mqttAdaptor := mqtt.NewAdaptor(cfg.Mqtt.Host, "rpi")
 	mqttAdaptor.SetAutoReconnect(true)
 
-	bme280 := i2c.NewBME280Driver(rpiAdaptor, i2c.WithAddress(0x76))
+	bme280 := i2c.NewBME280Driver(rpiAdaptor, i2c.WithAddress(cfg.Bme280.Address)) // 0x76
 	pir := gpio.NewPIRMotionDriver(rpiAdaptor, cfg.Pir.Pin)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	onMotionHandler := func(data interface{}) {
+		mqttAdaptor.Publish(x(cfg.Pir.MqttSuffix), data.([]byte))
+	}
 
 	work := func() {
 		//TODO: paho + LWT setWill + onConnect
@@ -102,28 +105,19 @@ func main() {
 			})
 		})
 
-		pir.On(gpio.MotionDetected, func(data interface{}) {
-			mqttAdaptor.Publish(x(cfg.Pir.MqttSuffix), []byte("1"))
-			fmt.Print(data)
-		})
-		pir.On(gpio.MotionStopped, func(data interface{}) {
-			mqttAdaptor.Publish(x(cfg.Pir.MqttSuffix), []byte("0"))
-			fmt.Print(data)
-		})
+		pir.On(gpio.MotionDetected, onMotionHandler)
+		pir.On(gpio.MotionStopped, onMotionHandler)
 
 		gobot.Every(cfg.Bme280.Interval, func() {
-			t, e := bme280.Temperature()
-			if e == nil {
+			if t, err := bme280.Temperature(); err == nil {
 				mqttAdaptor.Publish(x("temperature"), float32bytes(t))
 			}
 
-			p, e := bme280.Pressure()
-			if e == nil {
+			if p, err := bme280.Pressure(); err == nil {
 				mqttAdaptor.Publish(x("pressure"), float32bytes(p/100))
 			}
 
-			h, e := bme280.Humidity()
-			if e == nil {
+			if h, err := bme280.Humidity(); err == nil {
 				mqttAdaptor.Publish(x("humidity"), float32bytes(h))
 			}
 		})
