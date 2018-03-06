@@ -3,13 +3,13 @@ mqtt:
   preffix: rpi/
 pir:
   pin: 35
-  mqtt-suffix: pir
+  mqtt_suffix: pir
 bme280:
   interval: 5m
   address: 0x76
 ble:
   interval: 2m
   duration: 10s
-  mqtt-preffix: location/
-  known-devices:
+  mqtt_preffix: location/
+  known_devices:
     - aa:bb:cc:dd:aa:bb # bla

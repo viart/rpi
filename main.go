@@ -30,12 +30,12 @@ type config struct {
 	Ble struct {
 		Interval     time.Duration
 		Duration     time.Duration
-		MqttPreffix  string   `yaml:"mqtt-preffix"`
-		KnownDevices []string `yaml:"known-devices"`
+		MqttPreffix  string   `mapstructure:"mqtt_preffix"`
+		KnownDevices []string `mapstructure:"known_devices"`
 	}
 	Pir struct {
 		Pin        string
-		MqttSuffix string `yaml:"mqtt-suffix"`
+		MqttSuffix string `mapstructure:"mqtt_suffix"`
 	}
 }
 
@@ -61,6 +61,7 @@ func init() {
 	if err != nil {
 		log.Fatalf("Error decoding into a config struct, %v", err)
 	}
+
 	mqttClient = initMqtt()
 }
 
