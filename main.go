@@ -51,6 +51,7 @@ func float32bytes(value float32) []byte {
 
 func init() {
 	viper.AddConfigPath(".")
+	viper.AddConfigPath("/etc/gobot/")
 	viper.SetConfigName(*configFile)
 
 	if err := viper.ReadInConfig(); err != nil {
@@ -65,7 +66,7 @@ func init() {
 	mqttClient = initMqtt()
 }
 
-//TODO: proper shutdown
+//TODO: proper shutdown + keep-alive?
 func initMqtt() mqtt.Client {
 	opts := mqtt.NewClientOptions().AddBroker(cfg.Mqtt.Broker).SetClientID("rpi").SetAutoReconnect(true)
 	if cfg.Mqtt.LWT != "" {
@@ -104,7 +105,11 @@ func main() {
 	defer cancel()
 
 	onMotionHandler := func(data interface{}) {
-		mqttClient.Publish(x(cfg.Pir.MqttSuffix), 1, false, data.([]byte))
+		val := []byte("0")
+		if data == 1 {
+			val = []byte("1")
+		}
+		mqttClient.Publish(x(cfg.Pir.MqttSuffix), 1, false, val)
 	}
 
 	work := func() {
