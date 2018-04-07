@@ -61,6 +61,12 @@
   revision = "23c074d0eceb2b8a5bfdbb271ab780cde70f05a8"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/jacobsa/go-serial"
+  packages = ["serial"]
+  revision = "15cf729a72d49e837fa047a4142fa6e4d5ab45a1"
+
+[[projects]]
   name = "github.com/magiconair/properties"
   packages = ["."]
   revision = "c3beff4c2358b44d0493c7dda585e7db7ff28ae6"
@@ -212,6 +218,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "095980d6c84b33f938d99b0d15460ae3d12bdb3b1f9acdca128f4321598ee71f"
+  inputs-digest = "8a942bba7077fc193810c7b334628c1a63793f6abb207b365831fa7eec21531c"
   solver-name = "gps-cdcl"
   solver-version = 1

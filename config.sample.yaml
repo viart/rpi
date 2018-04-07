@@ -1,15 +1,24 @@
 mqtt:
   broker: tcp://server:1883
   preffix: rpi/
+  lwt: device/status
 pir:
+  enabled: false
   pin: 35
   mqtt_suffix: pir
 bme280:
+  enabled: false
   interval: 5m
   address: 0x76
 ble:
+  enabled: false
   interval: 2m
   duration: 10s
   mqtt_preffix: location/
   known_devices:
     - aa:bb:cc:dd:aa:bb # bla
+mhz19:
+  enabled: false
+  interval: 2m
+  port: /dev/ttyS0
+  mqtt_suffix: co2
