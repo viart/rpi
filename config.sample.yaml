@@ -1,7 +1,8 @@
 mqtt:
   broker: tcp://server:1883
+  id: rpi # must be unique
   preffix: rpi/
-  lwt: device/status
+  lwt: rpi/status
 pir:
   enabled: false
   pin: 35

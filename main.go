@@ -21,6 +21,7 @@ import (
 type config struct {
 	Mqtt struct {
 		Broker  string
+		Id      string
 		LWT     string
 		Preffix string
 	}
@@ -78,7 +79,7 @@ func init() {
 
 //TODO: proper shutdown + keep-alive?
 func initMqtt() mqtt.Client {
-	opts := mqtt.NewClientOptions().AddBroker(cfg.Mqtt.Broker).SetClientID("rpi").SetAutoReconnect(true)
+	opts := mqtt.NewClientOptions().AddBroker(cfg.Mqtt.Broker).SetClientID(cfg.Mqtt.Id).SetAutoReconnect(true)
 	if cfg.Mqtt.LWT != "" {
 		opts.SetBinaryWill(cfg.Mqtt.LWT, []byte("0"), 1, true)
 		// inspired by https://www.hivemq.com/blog/mqtt-essentials-part-9-last-will-and-testament
@@ -207,12 +208,10 @@ func main() {
 		if cfg.Mhz19.Enabled {
 			gobot.Every(cfg.Mhz19.Interval, func() {
 				if co2 := readCO2(); co2 != -1 {
-					mqttClient.Publish(x(cfg.Mhz19.MqttSuffix), 1, false, co2)
+					mqttClient.Publish(x(cfg.Mhz19.MqttSuffix), 1, false, strconv.Itoa(co2))
 				}
 			})
 		}
-
-		// mqttAdaptor.On("hello", func(msg mqtt.Message) { fmt.Println(msg) })
 	}
 
 	var devices []gobot.Device
