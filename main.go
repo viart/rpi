@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/eclipse/paho.mqtt.golang"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/go-ble/ble"
 	"github.com/go-ble/ble/linux"
 	"github.com/jacobsa/go-serial/serial"
@@ -20,10 +20,12 @@ import (
 
 type config struct {
 	Mqtt struct {
-		Broker  string
-		Id      string
-		LWT     string
-		Preffix string
+		Broker   string
+		Id       string
+		Username string
+		Password string
+		LWT      string
+		Preffix  string
 	}
 	Bme280 struct {
 		Enabled  bool
@@ -86,6 +88,12 @@ func initMqtt() mqtt.Client {
 		opts.SetOnConnectHandler(func(c mqtt.Client) {
 			c.Publish(cfg.Mqtt.LWT, 1, true, []byte("1"))
 		})
+	}
+	if cfg.Mqtt.Username != "" {
+		opts.SetUsername(cfg.Mqtt.Username)
+		if cfg.Mqtt.Username != "" {
+			opts.SetPassword(cfg.Mqtt.Password)
+		}
 	}
 
 	c := mqtt.NewClient(opts)
@@ -158,6 +166,8 @@ func main() {
 		pir = gpio.NewPIRMotionDriver(rpiAdaptor, cfg.Pir.Pin)
 	}
 
+	// radar := gpio.NewDirectPinDriver(rpiAdaptor, cfg.Pir.Pin)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -188,6 +198,14 @@ func main() {
 			pir.On(gpio.MotionDetected, onMotionHandler)
 			pir.On(gpio.MotionStopped, onMotionHandler)
 		}
+
+		// prevVal := 0
+		// gobot.Every(2*time.Second, func() {
+		// 	if val, err := radar.DigitalRead(); err == nil && val != prevVal {
+		// 		onMotionHandler(val)
+		// 		prevVal = val
+		// 	}
+		// })
 
 		if cfg.Bme280.Enabled {
 			gobot.Every(cfg.Bme280.Interval, func() {

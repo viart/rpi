@@ -6,7 +6,7 @@ VERSION?=?
 COMMIT=$(shell git rev-parse HEAD)
 BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
 
-BUILD_BINARY=${GOPATH}/src/github.com/viart/${BINARY}/build/${BINARY}
+BUILD_BINARY=build/${BINARY}
 
 # Setup the -ldflags option for go build here, interpolate the variable values
 LDFLAGS = -ldflags "-X main.VERSION=${VERSION} -X main.COMMIT=${COMMIT} -X main.BRANCH=${BRANCH}"
@@ -15,7 +15,7 @@ LDFLAGS = -ldflags "-X main.VERSION=${VERSION} -X main.COMMIT=${COMMIT} -X main.
 all: clean vet arm darwin
 
 arm:
-	GOOS=linux GOARCH=arm GOARM=7 go build ${LDFLAGS} -o ${BUILD_BINARY}-arm .
+	GOOS=linux GOARCH=arm GOARM=6 go build ${LDFLAGS} -o ${BUILD_BINARY}-arm .
 
 darwin:
 	GOOS=darwin GOARCH=${GOARCH} go build ${LDFLAGS} -o ${BUILD_BINARY}-darwin-${GOARCH} .
